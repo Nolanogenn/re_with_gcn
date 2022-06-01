@@ -7,8 +7,8 @@ url="https://figshare.com/ndownloader/files/8768701"
 mkdir data
 cd data
 wget $url
-unzip {$url:39:7} 
-rm {$ulr:39:7}
+unzip ${url:39:7} 
+rm ${ulr:39:7}
 
 cd ..
 echo "done!"
