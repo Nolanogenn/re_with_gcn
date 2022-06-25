@@ -206,9 +206,7 @@ def getDf(sentences):
                 row_rel = [enum_sent, g, sentence_string, rel_uri, rel_boundaries, subj_ids[subj_id_index],
                            obj_ids[obj_id_index], subj_ids, obj_ids]
                 df_rel.append(row_rel)
-        except KeyError:
-            pass
-        except IndexError:
+        except:
             pass
 
     return df_rel

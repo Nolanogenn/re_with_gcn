@@ -7,6 +7,7 @@ from torch import nn
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import GAE, RGCNConv
 import torch.nn.functional as F
+from tqdm import tqdm
 
 from pyg_dataset import REDataset
 
@@ -51,19 +52,17 @@ class Decoder(torch.nn.Module):
 def score(y_true, y_pred):
     return {
         'f1_micro': f1_score(y_true, y_pred, average='micro'),
-        #'f1_macro': f1_score(y_true, y_pred, average='macro'),
         'precision_micro': precision_score(y_true, y_pred, average='micro'),
-        #'precision_macro': precision_score(y_true, y_pred, average='macro'),
         'recall_micro': recall_score(y_true, y_pred, average='micro'),
-        #'recall_macro': recall_score(y_true, y_pred, average='macro'),
     }
 
 
 if __name__ == '__main__':
-    print('start training')
 
     dataset = REDataset('./data/trex', debug=False)
     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE)
+
+    print('start training')
 
     model = GAE(
         RGCNEncoder(feature_channels=768,
@@ -79,9 +78,11 @@ if __name__ == '__main__':
     loss_function = nn.CrossEntropyLoss()
     model.train()
 
-    loss_values = []
-    score_values = []
-    for epoch in range(0, 1):
+    for epoch in range(0, 10):
+        print(datetime.now().strftime("%Y/%m/%d, %H:%M:%S"), 'epoch:', epoch)
+        loss_values = []
+        score_values = []
+
         for batch in dataloader:
             optimizer.zero_grad()
 
@@ -94,16 +95,15 @@ if __name__ == '__main__':
             y_pred = model.decode(z, batch.y)
 
             cross_entropy_loss = loss_function(y_pred, batch.y.T[1])
-            print(cross_entropy_loss.item())
             loss_values.append(cross_entropy_loss.item())
 
-            scores = score(y_true=batch.y.T[1], y_pred=torch.softmax(y_pred, dim=1).argmax(dim=1))
+            scores = score(y_true=batch.y.T[1].cpu(), y_pred=torch.softmax(y_pred, dim=1).argmax(dim=1).cpu())
             score_values.append(scores)
 
             if torch.is_tensor(cross_entropy_loss) and cross_entropy_loss.requires_grad:
                 cross_entropy_loss.backward()
                 optimizer.step()
 
-    with open(f'logs_{datetime.now().strftime("%Y-%m-%d")}.log', 'w') as logs_out:
-        json.dump({'loss': loss_values,
-                   'scores': score_values}, logs_out, indent=4)
+        with open(f'./data/logs_{datetime.now().strftime("%Y-%m-%d")}.log', 'w') as logs_out:
+            json.dump({'loss': loss_values,
+                       'scores': score_values}, logs_out, indent=4)
